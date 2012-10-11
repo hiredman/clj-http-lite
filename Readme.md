@@ -214,10 +214,8 @@ To run the tests:
     Run all tests (including integration):
     $ lein test :all
 
-    Run tests against 1.2.1, 1.3 and 1.4
-    $ lein multi deps
-    $ lein multi test
-    $ lein multi test :all
+    Run tests against 1.2.1, 1.3, 1.4 and 1.5
+    $ lein all do clean, test :all
 
 ## License
 

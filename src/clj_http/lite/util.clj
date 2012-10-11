@@ -1,8 +1,7 @@
 (ns clj-http.lite.util
   "Helper functions for the HTTP client."
-  (:import (org.apache.commons.codec.binary Base64)
-           (org.apache.commons.io IOUtils)
-           (java.io ByteArrayInputStream ByteArrayOutputStream)
+  (:require [clojure.java.io :as io])
+  (:import (java.io ByteArrayInputStream ByteArrayOutputStream)
            (java.net URLEncoder URLDecoder)
            (java.util.zip InflaterInputStream DeflaterInputStream
                           GZIPInputStream GZIPOutputStream)))
@@ -31,13 +30,26 @@
 (defn base64-encode
   "Encode an array of bytes into a base64 encoded string."
   [unencoded]
-  (utf8-string (Base64/encodeBase64 unencoded)))
+  (javax.xml.bind.DatatypeConverter/printBase64Binary unencoded))
+
+(defn to-byte-array
+  "Returns a byte array for the InputStream provided."
+  [is]
+  (let [chunk-size 8192
+        baos (ByteArrayOutputStream.)
+        buffer (byte-array chunk-size)]
+    (loop [len (.read is buffer 0 chunk-size)]
+      (when (not= -1 len)
+        (.write baos buffer 0 len)
+        (recur (.read is buffer 0 chunk-size))))
+    (.toByteArray baos)))
+
 
 (defn gunzip
   "Returns a gunzip'd version of the given byte array."
   [b]
   (when b
-    (IOUtils/toByteArray (GZIPInputStream. (ByteArrayInputStream. b)))))
+    (to-byte-array (GZIPInputStream. (ByteArrayInputStream. b)))))
 
 (defn gzip
   "Returns a gzip'd version of the given byte array."
@@ -45,7 +57,7 @@
   (when b
     (let [baos (ByteArrayOutputStream.)
           gos  (GZIPOutputStream. baos)]
-      (IOUtils/copy (ByteArrayInputStream. b) gos)
+      (io/copy (ByteArrayInputStream. b) gos)
       (.close gos)
       (.toByteArray baos))))
 
@@ -53,10 +65,10 @@
   "Returns a zlib inflate'd version of the given byte array."
   [b]
   (when b
-    (IOUtils/toByteArray (InflaterInputStream. (ByteArrayInputStream. b)))))
+    (to-byte-array (InflaterInputStream. (ByteArrayInputStream. b)))))
 
 (defn deflate
   "Returns a deflate'd version of the given byte array."
   [b]
   (when b
-    (IOUtils/toByteArray (DeflaterInputStream. (ByteArrayInputStream. b)))))
+    (to-byte-array (DeflaterInputStream. (ByteArrayInputStream. b)))))
