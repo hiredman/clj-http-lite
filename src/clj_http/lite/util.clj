@@ -1,7 +1,7 @@
 (ns clj-http.lite.util
   "Helper functions for the HTTP client."
   (:require [clojure.java.io :as io])
-  (:import (java.io ByteArrayInputStream ByteArrayOutputStream)
+  (:import (java.io ByteArrayInputStream ByteArrayOutputStream InputStream)
            (java.net URLEncoder URLDecoder)
            (java.util.zip InflaterInputStream DeflaterInputStream
                           GZIPInputStream GZIPOutputStream)))
@@ -38,10 +38,10 @@
   (let [chunk-size 8192
         baos (ByteArrayOutputStream.)
         buffer (byte-array chunk-size)]
-    (loop [len (.read is buffer 0 chunk-size)]
+    (loop [len (.read ^InputStream is buffer 0 chunk-size)]
       (when (not= -1 len)
         (.write baos buffer 0 len)
-        (recur (.read is buffer 0 chunk-size))))
+        (recur (.read ^InputStream is buffer 0 chunk-size))))
     (.toByteArray baos)))
 
 

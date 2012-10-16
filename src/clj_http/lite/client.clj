@@ -103,7 +103,7 @@
     (if body
       (cond
        (string? body)
-       (client (-> req (assoc :body (.getBytes body)
+       (client (-> req (assoc :body (.getBytes ^String body)
                               :character-encoding (or body-encoding
                                                       "UTF-8"))))
        :else

@@ -1,8 +1,8 @@
 (ns clj-http.lite.core
   "Core HTTP request/response implementation."
   (:require [clojure.java.io :as io])
-  (:import (java.io ByteArrayOutputStream IOException)
-           (java.net URI URL)))
+  (:import (java.io ByteArrayOutputStream InputStream IOException)
+           (java.net URI URL HttpURLConnection)))
 
 (defn parse-headers
   "Takes a URLConnection and returns a map of names to values.
@@ -12,12 +12,12 @@
    in the headers."
   [conn]
   (loop [i 1 headers {}]
-    (let [k (.getHeaderFieldKey conn i)
-          v (.getHeaderField conn i)]
+    (let [k (.getHeaderFieldKey ^HttpURLConnection conn i)
+          v (.getHeaderField ^HttpURLConnection conn i)]
       (if k
         (recur (inc i) (update-in headers [k] conj v))
         (zipmap (for [k (keys headers)]
-                  (.toLowerCase k))
+                  (.toLowerCase ^String k))
                 (for [v (vals headers)]
                   (if (= 1 (count v))
                     (first v)
@@ -28,12 +28,12 @@
   stream that closes itself and the connection manager when closed."
   [{:keys [as]} conn]
   (let [ins (try
-              (.getInputStream conn)
+              (.getInputStream ^HttpURLConnection conn)
               (catch Exception e
-                (.getErrorStream conn)))]
+                (.getErrorStream ^HttpURLConnection conn)))]
     (if (= :stream as)
       ins
-      (with-open [ins ins
+      (with-open [ins ^InputStream ins
                   baos (ByteArrayOutputStream.)]
         (io/copy ins baos)
         (.flush baos)
@@ -61,7 +61,7 @@
       (.setRequestProperty conn "Content-Type" content-type))
     (doseq [[h v] headers]
       (.setRequestProperty conn h v))
-    (.setRequestMethod conn (.toUpperCase (name request-method)))
+    (.setRequestMethod ^HttpURLConnection conn (.toUpperCase (name request-method)))
     (when body
       (.setDoOutput conn true))
     (when socket-timeout
@@ -71,7 +71,7 @@
       (with-open [out (.getOutputStream conn)]
         (io/copy body out)))
     (merge {:headers (parse-headers conn)
-            :status (.getResponseCode conn)
+            :status (.getResponseCode ^HttpURLConnection conn)
             :body (when-not (= request-method :head)
                     (coerce-body-entity req conn))}
            (when save-request?
