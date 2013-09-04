@@ -1,8 +1,10 @@
 (ns clj-http.lite.core
   "Core HTTP request/response implementation."
-  (:require [clojure.java.io :as io])
+  (:require [clojure.java.io :as io]
+            [clj-http.lite.NoDHSocketFactory])
   (:import (java.io ByteArrayOutputStream InputStream IOException)
-           (java.net URI URL HttpURLConnection)))
+           (java.net URI URL HttpURLConnection)
+           (javax.net.ssl HttpsURLConnection)))
 
 (defn parse-headers
   "Takes a URLConnection and returns a map of names to values.
@@ -39,6 +41,17 @@
         (.flush baos)
         (.toByteArray baos)))))
 
+(defn- get-connection [^URL url]
+  "Wrap .openConnection to "
+  (let [conn (.openConnection url)]
+    (if (instance? HttpsURLConnection conn)
+      (doto conn
+        (.setSSLSocketFactory
+         (clj-http.lite.NoDHSocketFactory/no-dhs-socket-factory
+            (.getSSLSocketFactory conn))))
+      conn)))
+
+ 
 (defn request
   "Executes the HTTP request corresponding to the given Ring request map and
    returns the Ring response map corresponding to the resulting HTTP response.
@@ -52,7 +65,7 @@
                       (when server-port (str ":" server-port))
                       uri
                       (when query-string (str "?" query-string)))
-        conn (.openConnection ^URL (URL. http-url))]
+        conn (get-connection ^URL (URL. http-url))]
     (when (and content-type character-encoding)
       (.setRequestProperty conn "Content-Type" (str content-type
                                                     "; charset="
