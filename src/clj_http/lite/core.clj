@@ -31,7 +31,7 @@
               (.getInputStream ^HttpURLConnection conn)
               (catch Exception e
                 (.getErrorStream ^HttpURLConnection conn)))]
-    (if (= :stream as)
+    (if (or (= :stream as) (nil? ins))
       ins
       (with-open [ins ^InputStream ins
                   baos (ByteArrayOutputStream.)]
@@ -47,7 +47,7 @@
    the clj-http uses ByteArrays for the bodies."
   [{:keys [request-method scheme server-name server-port uri query-string
            headers content-type character-encoding body socket-timeout
-           conn-timeout multipart debug insecure? save-request?] :as req}]
+           conn-timeout multipart debug insecure? save-request? follow-redirects] :as req}]
   (let [http-url (str (name scheme) "://" server-name
                       (when server-port (str ":" server-port))
                       uri
@@ -61,6 +61,8 @@
       (.setRequestProperty conn "Content-Type" content-type))
     (doseq [[h v] headers]
       (.setRequestProperty conn h v))
+    (when (false? follow-redirects)
+      (.setInstanceFollowRedirects ^HttpURLConnection conn false))
     (.setRequestMethod ^HttpURLConnection conn (.toUpperCase (name request-method)))
     (when body
       (.setDoOutput conn true))

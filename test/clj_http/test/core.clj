@@ -21,6 +21,7 @@
     {:status 200 :body (get-in req [:headers "x-my-header"])}
     [:post "/post"]
     {:status 200 :body (slurp (:body req))}
+    [:get "/redirect"] {:status 302 :headers {"Location" "/get"} }
     [:get "/error"]
     {:status 500 :body "o noes"}
     [:get "/timeout"]
@@ -97,6 +98,17 @@
   (run-server)
   (let [resp (request {:request-method :get :uri "/error"})]
     (is (= 500 (:status resp)))))
+
+(deftest ^{:integration true} returns-status-on-redirect
+  (run-server)
+  (let [resp (request {:request-method :get :uri "/redirect" :follow-redirects false})]
+    (is (= 302 (:status resp)))))
+
+(deftest ^{:integration true} auto-follows-on-redirect
+  (run-server)
+  (let [resp (request {:request-method :get :uri "/redirect"})]
+    (is (= 200 (:status resp)))
+    (is (= "get" (slurp-body resp)))))
 
 (deftest ^{:integration true} sets-socket-timeout
   (run-server)

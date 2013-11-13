@@ -2,6 +2,7 @@
   "Batteries-included HTTP client."
   (:use [slingshot.slingshot :only [throw+]])
   (:require [clojure.string :as str]
+            [clojure.java.io :as io]
             [clj-http.lite.core :as core]
             [clj-http.lite.util :as util])
   (:import (java.io InputStream File)
@@ -15,7 +16,7 @@
   (when (and v (pos? v)) v))
 
 (defn parse-url [url]
-  (let [url-parsed (URL. url)]
+  (let [url-parsed (io/as-url url)]
     {:scheme (keyword (.getProtocol url-parsed))
      :server-name (.getHost url-parsed)
      :server-port (when-pos (.getPort url-parsed))
