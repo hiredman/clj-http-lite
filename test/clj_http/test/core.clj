@@ -138,19 +138,35 @@
 (deftest ^{:integration true} self-signed-ssl-get
   (let [t (doto (Thread. #(ring/run-jetty handler
                                           {:port 8081 :ssl-port 18082 :ssl? true
-                                           :keystore "test-resources/keystore"
-                                           :key-password "keykey"})) .start)]
+                                           :keystore "test-resources/keystore.jks"
+                                           :key-password "changeit"})) .start)]
     (Thread/sleep 1000)
     (try
       (is (thrown? javax.net.ssl.SSLException
                    (request {:request-method :get :uri "/get"
                              :server-port 18082 :scheme :https})))
       #_(let [resp (request {:request-method :get :uri "/get" :server-port 18082
-                           :scheme :https :insecure? true})]
-        (is (= 200 (:status resp)))
-        (is (= "get" (slurp-body resp))))
+                             :scheme :https :insecure? true})]
+          (is (= 200 (:status resp)))
+          (is (= "get" (slurp-body resp))))
       (finally
-       (.stop t)))))
+        (.stop t)))))
+
+(deftest ^{:integration true} self-signed-ssl-get-with-trust-store
+  (let [t (doto (Thread. #(ring/run-jetty handler
+                                          {:port 8082 :ssl-port 18083 :ssl? true
+                                           :keystore "test-resources/keystore.jks"
+                                           :key-password "changeit"})) .start)]
+    (Thread/sleep 1000)
+    (try
+      (let [resp (request {:request-method :get :uri "/get" :server-port 18083
+                           :scheme :https
+                           :trust-store "truststore.jks"
+                           :trust-store-pass "changeit"})]
+          (is (= 200 (:status resp)))
+          (is (= "get" (slurp-body resp))))
+      (finally
+        (.stop t)))))
 
 ;; (deftest ^{:integration true} multipart-form-uploads
 ;;   (run-server)

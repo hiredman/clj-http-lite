@@ -1,0 +1,12 @@
+* Generate CA and import into keystore and truststore
+openssl req -new -x509 -keyout ca-key.pem -out ca-cert.pem -days 3650
+keytool -import -keystore truststore.jks -file ca-cert.pem
+keytool -import -keystore keystore.jks -file ca-cert.pem
+
+* Generate key and CSR for server (Jetty running on localhost)
+keytool -keystore keystore.jks -genkey -alias localhost
+keytool -keystore keystore.jks -certreq -alias localhost -keyalg rsa -file localhost.csr
+
+* Sign CSR with CA cert and import into keystore
+openssl x509 -req -CA ca-cert.pem -CAkey ca-key.pem -in localhost.csr -out localhost.cer -days 3650 -CAcreateserial
+keytool -import -keystore keystore.jks -file localhost.cer -alias localhost
