@@ -1,8 +1,10 @@
 (ns clj-http.lite.core
   "Core HTTP request/response implementation."
   (:require [clojure.java.io :as io])
-  (:import (java.io ByteArrayOutputStream InputStream IOException)
-           (java.net URI URL HttpURLConnection)))
+  (:import [java.io ByteArrayOutputStream InputStream IOException]
+           [java.net URI URL HttpURLConnection]
+           [javax.net.ssl HttpsURLConnection SSLContext TrustManagerFactory]
+           [java.security KeyStore]))
 
 (defn parse-headers
   "Takes a URLConnection and returns a map of names to values.
@@ -39,6 +41,25 @@
         (.flush baos)
         (.toByteArray baos)))))
 
+(defn get-connection [url]
+  (.openConnection ^URL (URL. url)))
+
+(defn set-trust-store
+  [^HttpsURLConnection conn
+   {:keys [trust-store trust-store-pass trust-store-type security-protocol]
+    :or {trust-store-type "jks" security-protocol "TLS"}}]
+  (let [ssl-context (SSLContext/getInstance security-protocol)
+        key-store (KeyStore/getInstance trust-store-type)
+        trust-manager-factory (TrustManagerFactory/getInstance "SunX509")]
+    (.load key-store (io/input-stream
+                      (or (io/resource trust-store)
+                          (io/file trust-store)))
+           (char-array trust-store-pass))
+    (.init trust-manager-factory key-store)
+    (.init ssl-context nil (.getTrustManagers trust-manager-factory) nil)
+    (.setSSLSocketFactory conn (.getSocketFactory ssl-context))
+    conn))
+
 (defn request
   "Executes the HTTP request corresponding to the given Ring request map and
    returns the Ring response map corresponding to the resulting HTTP response.
@@ -48,12 +69,15 @@
   [{:keys [request-method scheme server-name server-port uri query-string
            headers content-type character-encoding body socket-timeout
            conn-timeout multipart debug insecure? save-request? follow-redirects
-           chunk-size] :as req}]
+           chunk-size trust-store trust-store-pass] :as req}]
   (let [http-url (str (name scheme) "://" server-name
                       (when server-port (str ":" server-port))
                       uri
                       (when query-string (str "?" query-string)))
-        conn (.openConnection ^URL (URL. http-url))]
+        ^HttpURLConnection conn
+        (cond-> (get-connection http-url)
+          (and (= scheme :https) trust-store trust-store-pass)
+          (set-trust-store req))]
     (when (and content-type character-encoding)
       (.setRequestProperty conn "Content-Type" (str content-type
                                                     "; charset="
@@ -63,8 +87,8 @@
     (doseq [[h v] headers]
       (.setRequestProperty conn h v))
     (when (false? follow-redirects)
-      (.setInstanceFollowRedirects ^HttpURLConnection conn false))
-    (.setRequestMethod ^HttpURLConnection conn (.toUpperCase (name request-method)))
+      (.setInstanceFollowRedirects conn false))
+    (.setRequestMethod conn (.toUpperCase (name request-method)))
     (when body
       (.setDoOutput conn true))
     (when socket-timeout
@@ -78,9 +102,9 @@
       (with-open [out (.getOutputStream conn)]
         (io/copy body out)))
     (merge {:headers (parse-headers conn)
-            :status (.getResponseCode ^HttpURLConnection conn)
+            :status (.getResponseCode conn)
             :body (when-not (= request-method :head)
                     (coerce-body-entity req conn))}
            (when save-request?
              {:request (assoc (dissoc req :save-request?)
-                         :http-url http-url)}))))
+                              :http-url http-url)}))))
