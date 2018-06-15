@@ -161,7 +161,7 @@
     (try
       (let [resp (request {:request-method :get :uri "/get" :server-port 18083
                            :scheme :https
-                           :trust-store "truststore.jks"
+                           :trust-store "test-resources/truststore.jks"
                            :trust-store-pass "changeit"})]
           (is (= 200 (:status resp)))
           (is (= "get" (slurp-body resp))))

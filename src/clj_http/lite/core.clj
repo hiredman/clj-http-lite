@@ -57,7 +57,8 @@
            (char-array trust-store-pass))
     (.init trust-manager-factory key-store)
     (.init ssl-context nil (.getTrustManagers trust-manager-factory) nil)
-    (.setSSLSocketFactory conn (.getSocketFactory ssl-context))))
+    (.setSSLSocketFactory conn (.getSocketFactory ssl-context))
+    conn))
 
 (defn request
   "Executes the HTTP request corresponding to the given Ring request map and
