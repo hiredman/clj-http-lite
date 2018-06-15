@@ -65,6 +65,12 @@ More example requests:
 ;; Need to contact a server with an untrusted SSL cert?
 (client/get "https://alioth.debian.org" {:insecure? true})
 
+;; Need to specify a trust store?
+(client/get "https://my.corp.com" {:trust-store "/path/to/trust-store.jks"
+                                   :trust-store-type "jks"  ; default jks
+                                   :trust-store-pass "trustpass"
+                                   :security-protocol "TLS" ; default TLS})
+
 ;; If you don't want to follow-redirects automatically:
 (client/get "http://site.come/redirects-somewhere" {:follow-redirects false})
 
