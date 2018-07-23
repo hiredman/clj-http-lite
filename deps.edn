@@ -1,0 +1,3 @@
+{:paths ["src"]
+ :deps {org.clojure/clojure {:mvn/version "1.6.0"}
+        slingshot {:mvn/version "0.12.1"}}}

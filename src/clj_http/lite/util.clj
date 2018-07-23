@@ -27,10 +27,15 @@
   [unencoded]
   (URLEncoder/encode unencoded "UTF-8"))
 
-(defn base64-encode
+(defmacro base64-encode
   "Encode an array of bytes into a base64 encoded string."
   [unencoded]
-  (javax.xml.bind.DatatypeConverter/printBase64Binary unencoded))
+  (if (try (import 'javax.xml.bind.DatatypeConverter)
+           (catch ClassNotFoundException _))
+    `(javax.xml.bind.DatatypeConverter/printBase64Binary ~unencoded)
+    (do
+      (import 'java.util.Base64)
+      `(.encodeToString (java.util.Base64/getEncoder) ~unencoded))))
 
 (defn to-byte-array
   "Returns a byte array for the InputStream provided."
